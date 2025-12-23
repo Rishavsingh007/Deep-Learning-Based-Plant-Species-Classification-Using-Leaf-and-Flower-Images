@@ -221,8 +221,8 @@ print(f"Test Accuracy: {results['accuracy']:.2f}%")
 
 ## 👤 Author
 
-**Student Name:** [Your Name]  
-**Student ID:** [Your ID]  
+**Student Name:** Rishav Singh
+**Student ID:** NP01MS7A240010
 **Module:** CT7160NI Computer Vision  
 **Institution:** London Metropolitan University / Islington College
 
