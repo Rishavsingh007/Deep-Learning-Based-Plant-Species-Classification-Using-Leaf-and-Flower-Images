@@ -1,0 +1,156 @@
+# CT7160NI Plant Species Classification Project Configuration
+# =============================================================
+
+# Project Information
+project:
+  name: "Plant Species Classification"
+  version: "1.0.0"
+  author: "[Your Name]"
+  module: "CT7160NI Computer Vision"
+
+# Data Configuration
+data:
+  dataset_name: "Oxford 102 Flowers"
+  raw_data_path: "data/raw/oxford_flowers_102"
+  processed_data_path: "data/processed"
+  
+  # Image settings
+  image_size: 224  # For ResNet/Baseline CNN (use 300 for EfficientNet)
+  num_classes: 102
+  
+  # Data split ratios
+  train_ratio: 0.70
+  val_ratio: 0.15
+  test_ratio: 0.15
+  
+  # Data loading
+  batch_size: 32
+  num_workers: 4
+  pin_memory: true
+
+# Augmentation Configuration
+augmentation:
+  # Training augmentations
+  train:
+    random_rotation: 20        # degrees
+    horizontal_flip: 0.5       # probability
+    vertical_flip: 0.3         # probability
+    color_jitter:
+      brightness: 0.2
+      contrast: 0.2
+      saturation: 0.2
+      hue: 0.1
+    random_resized_crop:
+      scale: [0.8, 1.0]
+      ratio: [0.9, 1.1]
+  
+  # Normalization (ImageNet stats)
+  normalize:
+    mean: [0.485, 0.456, 0.406]
+    std: [0.229, 0.224, 0.225]
+
+# Model Configuration
+models:
+  # Baseline CNN
+  baseline_cnn:
+    name: "BaselineCNN"
+    channels: [64, 128, 256, 512]
+    dropout: 0.5
+    
+  # ResNet50
+  resnet50:
+    name: "ResNet50"
+    pretrained: true
+    freeze_layers: 45  # Freeze first N layers
+    dropout: 0.3
+    
+  # EfficientNet-B3
+  efficientnet:
+    name: "EfficientNet-B3"
+    pretrained: true
+    image_size: 300
+    dropout: 0.3
+
+# Training Configuration
+training:
+  # General settings
+  epochs: 50
+  early_stopping_patience: 10
+  save_best_only: true
+  
+  # Optimizer settings
+  optimizer:
+    name: "Adam"  # Options: Adam, SGD, AdamW
+    learning_rate: 0.0001
+    weight_decay: 0.0001
+    # For SGD only
+    momentum: 0.9
+    nesterov: true
+  
+  # Learning rate scheduler
+  scheduler:
+    name: "ReduceLROnPlateau"
+    factor: 0.1
+    patience: 5
+    min_lr: 0.000001
+  
+  # Loss function
+  loss: "CrossEntropyLoss"
+  
+  # Mixed precision training
+  use_amp: false
+
+# Transfer Learning Configuration
+transfer_learning:
+  # Phase 1: Train only new layers
+  phase1:
+    epochs: 10
+    learning_rate: 0.001
+    freeze_backbone: true
+  
+  # Phase 2: Fine-tune all layers
+  phase2:
+    epochs: 40
+    learning_rate: 0.0001
+    freeze_backbone: false
+    unfreeze_from_layer: 0  # 0 means unfreeze all
+
+# Evaluation Configuration
+evaluation:
+  metrics:
+    - accuracy
+    - precision
+    - recall
+    - f1_score
+    - top5_accuracy
+    - confusion_matrix
+    - roc_auc
+  
+  visualization:
+    - training_curves
+    - confusion_matrix
+    - roc_curves
+    - gradcam
+    - tsne_embeddings
+    - misclassified_examples
+
+# Paths Configuration
+paths:
+  models_dir: "results/models"
+  figures_dir: "results/figures"
+  metrics_dir: "results/metrics"
+  logs_dir: "results/logs"
+  checkpoints_dir: "results/models/checkpoints"
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  tensorboard: true
+  log_interval: 10  # Log every N batches
+
+# Hardware Configuration
+hardware:
+  device: "auto"  # Options: auto, cuda, cpu
+  gpu_id: 0
+  seed: 42  # For reproducibility
+
