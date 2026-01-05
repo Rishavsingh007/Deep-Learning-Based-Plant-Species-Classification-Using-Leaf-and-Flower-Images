@@ -43,23 +43,36 @@ def get_train_transforms(image_size=224, use_albumentations=True):
     """
     if use_albumentations:
         return A.Compose([
+            # Stronger augmentation as recommended
             A.RandomResizedCrop(
-                height=image_size, 
-                width=image_size, 
-                scale=(0.8, 1.0),
-                ratio=(0.9, 1.1)
+                size=(image_size, image_size),  # Use size parameter instead of height/width
+                scale=(0.7, 1.0),  # More aggressive crop
+                ratio=(0.8, 1.2)   # Wider aspect ratio range
+            ),
+            A.Affine(
+                translate_percent={'x': (-0.1, 0.1), 'y': (-0.1, 0.1)},  # Translation (10%)
+                scale=(0.9, 1.1),  # Scaling (±10%)
+                rotate=(-30, 30),   # Rotation (±30°)
+                p=0.5
             ),
             A.HorizontalFlip(p=0.5),
             A.VerticalFlip(p=0.3),
-            A.Rotate(limit=20, p=0.5),
             A.ColorJitter(
-                brightness=0.2,
-                contrast=0.2,
-                saturation=0.2,
+                brightness=0.3,  # Increased from 0.2
+                contrast=0.3,    # Increased from 0.2
+                saturation=0.3,   # Increased from 0.2
                 hue=0.1,
                 p=0.5
             ),
-            A.RandomBrightnessContrast(p=0.2),
+            A.RandomBrightnessContrast(
+                brightness_limit=0.2,
+                contrast_limit=0.2,
+                p=0.3
+            ),
+            A.OneOf([
+                A.ToGray(p=1.0),  # Convert to grayscale
+                A.NoOp()
+            ], p=0.1),  # Convert to grayscale with 10% probability
             A.GaussianBlur(blur_limit=(3, 7), p=0.1),
             A.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
             ToTensorV2()

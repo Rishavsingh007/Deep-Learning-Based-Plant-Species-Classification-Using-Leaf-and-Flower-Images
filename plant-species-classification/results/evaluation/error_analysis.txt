@@ -1,0 +1,43 @@
+================================================================================
+ERROR ANALYSIS
+================================================================================
+
+Total Errors: 338
+Error Rate: 27.50%
+
+Top 20 Confusion Pairs:
+--------------------------------------------------------------------------------
+ 1. Class  50 -> Class  85:   9 errors
+ 2. Class  45 -> Class  47:   5 errors
+ 3. Class  88 -> Class  47:   4 errors
+ 4. Class  64 -> Class  47:   4 errors
+ 5. Class  73 -> Class  30:   4 errors
+ 6. Class  94 -> Class  71:   4 errors
+ 7. Class  76 -> Class  28:   3 errors
+ 8. Class  42 -> Class  43:   3 errors
+ 9. Class  88 -> Class  25:   3 errors
+10. Class  42 -> Class  30:   3 errors
+11. Class  10 -> Class  31:   3 errors
+12. Class  82 -> Class  85:   3 errors
+13. Class  75 -> Class  85:   2 errors
+14. Class  42 -> Class   8:   2 errors
+15. Class  76 -> Class  66:   2 errors
+16. Class  75 -> Class  44:   2 errors
+17. Class  71 -> Class  29:   2 errors
+18. Class  71 -> Class  43:   2 errors
+19. Class  82 -> Class  89:   2 errors
+20. Class  81 -> Class  18:   2 errors
+
+================================================================================
+Most Confident Errors (Top 10):
+--------------------------------------------------------------------------------
+Sample  799: Confidence 0.9888, True:  40, Pred:  49
+Sample   13: Confidence 0.9723, True:  88, Pred:  47
+Sample  549: Confidence 0.9601, True:  76, Pred:  16
+Sample 1164: Confidence 0.9596, True:  21, Pred:  28
+Sample 1037: Confidence 0.9585, True:  50, Pred:  85
+Sample  534: Confidence 0.9469, True:  81, Pred:  18
+Sample  721: Confidence 0.9448, True:  80, Pred:  75
+Sample  728: Confidence 0.9375, True:  52, Pred:   4
+Sample   69: Confidence 0.9270, True:  76, Pred:  66
+Sample  111: Confidence 0.9167, True:  88, Pred:  25

@@ -154,3 +154,8 @@ hardware:
   gpu_id: 0
   seed: 42  # For reproducibility
 
+# Attention Analysis Configuration
+attention_analysis:
+  enabled: false
+  threshold: 0.5  # Threshold for attention map binarization
+

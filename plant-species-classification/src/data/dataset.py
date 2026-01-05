@@ -12,6 +12,8 @@ from torch.utils.data import Dataset
 from PIL import Image
 import scipy.io as sio
 import numpy as np
+from sklearn.model_selection import train_test_split
+
 
 
 class FlowerDataset(Dataset):
@@ -38,6 +40,8 @@ class FlowerDataset(Dataset):
         List of corresponding labels (0-101)
     class_names : list
         List of flower category names (if available)
+    num_classes : int
+        Number of classes (102)
         
     Example:
     --------
@@ -51,7 +55,18 @@ class FlowerDataset(Dataset):
     """
     
     def __init__(self, root_dir, split='train', transform=None):
-        """Initialize the FlowerDataset."""
+        """
+        Initialize the FlowerDataset.
+        
+        Parameters:
+        -----------
+        root_dir : str
+            Path to dataset root directory
+        split : str
+            One of 'train', 'val', or 'test'
+        transform : callable, optional
+            Transform to apply to images
+        """
         self.root_dir = root_dir
         self.split = split
         self.transform = transform
@@ -64,11 +79,16 @@ class FlowerDataset(Dataset):
         
     def _load_dataset(self):
         """
-        Load dataset split information from .mat files.
+        Load dataset split information and create 70/15/15 stratified split.
         
         The Oxford 102 dataset provides:
         - imagelabels.mat: Contains labels for all images (1-102, converted to 0-101)
-        - setid.mat: Contains train/val/test split indices
+        
+        This implementation creates a stratified 70/15/15 split to ensure:
+        - 70% training data for better model learning
+        - 15% validation data for hyperparameter tuning
+        - 15% test data for final evaluation
+        - Balanced class distribution across all splits
         
         Returns:
         --------
@@ -76,8 +96,21 @@ class FlowerDataset(Dataset):
         """
         # Paths to .mat files
         labels_path = os.path.join(self.root_dir, 'imagelabels.mat')
-        splits_path = os.path.join(self.root_dir, 'setid.mat')
+        
+        # Try both possible locations for images (standard structure vs extracted archive structure)
         jpg_dir = os.path.join(self.root_dir, 'jpg')
+        if not os.path.exists(jpg_dir):
+            # Try alternative location (when extracted from archive)
+            alt_jpg_dir = os.path.join(self.root_dir, '102flowers', 'jpg')
+            if os.path.exists(alt_jpg_dir):
+                jpg_dir = alt_jpg_dir
+            else:
+                raise FileNotFoundError(
+                    f"Images directory not found. Tried:\n"
+                    f"  - {jpg_dir}\n"
+                    f"  - {alt_jpg_dir}\n"
+                    "Please ensure the dataset is properly extracted."
+                )
         
         # Check if files exist
         if not os.path.exists(labels_path):
@@ -91,16 +124,46 @@ class FlowerDataset(Dataset):
         labels_mat = sio.loadmat(labels_path)
         all_labels = labels_mat['labels'].flatten() - 1  # Convert to 0-indexed
         
-        # Load split indices
-        splits_mat = sio.loadmat(splits_path)
+        # Get all valid image indices (check which images actually exist)
+        valid_indices = []
+        valid_labels = []
+        
+        for idx in range(len(all_labels)):
+            img_name = f"image_{idx + 1:05d}.jpg"
+            img_path = os.path.join(jpg_dir, img_name)
+            if os.path.exists(img_path):
+                valid_indices.append(idx)
+                valid_labels.append(all_labels[idx])
+        
+        valid_indices = np.array(valid_indices)
+        valid_labels = np.array(valid_labels)
+        
+        # Create stratified 70/15/15 split
+        # First split: 70% train, 30% temp (val + test)
+        train_indices, temp_indices, train_labels, temp_labels = train_test_split(
+            valid_indices,
+            valid_labels,
+            test_size=0.30,  # 30% for val + test
+            stratify=valid_labels,  # Maintain class distribution
+            random_state=42  # For reproducibility
+        )
+        
+        # Second split: Split temp 50/50 to get 15/15 of total (30% * 0.5 = 15%)
+        val_indices, test_indices, val_labels, test_labels = train_test_split(
+            temp_indices,
+            temp_labels,
+            test_size=0.50,  # Split temp 50/50
+            stratify=temp_labels,  # Maintain class distribution
+            random_state=42  # For reproducibility
+        )
         
         # Get indices for the requested split
         if self.split == 'train':
-            indices = splits_mat['trnid'].flatten() - 1  # Convert to 0-indexed
+            indices = train_indices
         elif self.split == 'val':
-            indices = splits_mat['valid'].flatten() - 1
+            indices = val_indices
         elif self.split == 'test':
-            indices = splits_mat['tstid'].flatten() - 1
+            indices = test_indices
         else:
             raise ValueError(f"Invalid split: {self.split}. Must be 'train', 'val', or 'test'")
         

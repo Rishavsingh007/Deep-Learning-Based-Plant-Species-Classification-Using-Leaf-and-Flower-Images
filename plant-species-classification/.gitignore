@@ -36,7 +36,7 @@ env/
 # ============================================
 # IDE and Editor
 # ============================================
-.idea/
+# .idea/ - Commented out to allow tracking IDE settings
 .vscode/
 *.swp
 *.swo
@@ -56,40 +56,32 @@ env/
 # ============================================
 data/raw/
 data/processed/
-*.jpg
-*.jpeg
-*.png
-*.gif
-*.bmp
-*.mat
 
-# Keep directory structure
-!data/raw/.gitkeep
-!data/processed/.gitkeep
-!data/processed/train/.gitkeep
-!data/processed/val/.gitkeep
-!data/processed/test/.gitkeep
+# Keep directory structure (optional - uncomment if you want empty directories tracked)
+# !data/raw/.gitkeep
+# !data/processed/.gitkeep
+# !data/processed/train/.gitkeep
+# !data/processed/val/.gitkeep
+# !data/processed/test/.gitkeep
 
 # ============================================
 # Model Weights (Large files)
 # ============================================
-*.pth
-*.pt
-*.h5
-*.hdf5
-*.ckpt
-results/models/*.pth
-
-# Keep directory structure
-!results/models/.gitkeep
+# Model files - Commented out to allow tracking model weights
+# *.pth
+# *.pt
+# *.h5
+# *.hdf5
+# *.ckpt
 
 # ============================================
 # Log Files
 # ============================================
-*.log
-logs/
-results/logs/
-tensorboard_logs/
+# Log files - Commented out to allow tracking logs
+# *.log
+# logs/
+# results/logs/
+# tensorboard_logs/
 
 # ============================================
 # OS Generated Files

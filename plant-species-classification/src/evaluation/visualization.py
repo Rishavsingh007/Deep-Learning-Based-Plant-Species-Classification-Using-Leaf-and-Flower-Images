@@ -451,10 +451,113 @@ def plot_misclassified_examples(
     plt.tight_layout()
     
     if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
         plt.savefig(save_path, dpi=150, bbox_inches='tight')
         print(f"Misclassified examples saved to {save_path}")
     
-    plt.show()
+    plt.close()
+
+
+def plot_correctly_classified_examples(
+    images,
+    true_labels,
+    predictions,
+    confidence_scores=None,
+    class_names=None,
+    n_examples=16,
+    save_path=None
+):
+    """
+    Plot grid of correctly classified examples.
+    
+    Parameters:
+    -----------
+    images : torch.Tensor or np.array
+        Image tensors or arrays
+    true_labels : np.array
+        Ground truth labels
+    predictions : np.array
+        Predicted labels
+    confidence_scores : np.array, optional
+        Confidence scores for predictions
+    class_names : list, optional
+        Names of classes
+    n_examples : int
+        Number of examples to show
+    save_path : str, optional
+        Path to save the figure
+    """
+    # Find correctly classified examples
+    correct = predictions == true_labels
+    correct_indices = np.where(correct)[0]
+    
+    if len(correct_indices) == 0:
+        print("No correctly classified examples found!")
+        return
+    
+    # Select examples (prefer high confidence if available)
+    n_show = min(n_examples, len(correct_indices))
+    if confidence_scores is not None:
+        # Sort by confidence and select top examples
+        correct_with_conf = [(idx, confidence_scores[idx]) for idx in correct_indices]
+        correct_with_conf.sort(key=lambda x: x[1], reverse=True)
+        selected_indices = [idx for idx, _ in correct_with_conf[:n_show]]
+    else:
+        # Random selection
+        selected_indices = np.random.choice(correct_indices, n_show, replace=False)
+    
+    # Calculate grid size
+    n_cols = int(np.ceil(np.sqrt(n_show)))
+    n_rows = int(np.ceil(n_show / n_cols))
+    
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(3*n_cols, 3*n_rows))
+    axes = axes.flatten() if n_show > 1 else [axes]
+    
+    for i, idx in enumerate(selected_indices):
+        # Get image
+        if isinstance(images, torch.Tensor):
+            img = images[idx].cpu().numpy()
+            if img.shape[0] == 3:  # CHW format
+                img = img.transpose(1, 2, 0)
+            # Denormalize
+            mean = np.array([0.485, 0.456, 0.406])
+            std = np.array([0.229, 0.224, 0.225])
+            img = img * std + mean
+            img = np.clip(img, 0, 1)
+        else:
+            img = images[idx]
+        
+        axes[i].imshow(img)
+        
+        true_label = true_labels[idx]
+        pred_label = predictions[idx]
+        
+        if class_names:
+            title = f'True: {class_names[true_label]}\nPred: {class_names[pred_label]}'
+        else:
+            title = f'True: {true_label}\nPred: {pred_label}'
+        
+        # Add confidence if available
+        if confidence_scores is not None:
+            conf = confidence_scores[idx]
+            title += f'\nConf: {conf:.3f}'
+        
+        axes[i].set_title(title, fontsize=10, color='green')
+        axes[i].axis('off')
+    
+    # Hide empty subplots
+    for i in range(n_show, len(axes)):
+        axes[i].axis('off')
+    
+    plt.suptitle('Correctly Classified Examples', fontsize=14, fontweight='bold')
+    plt.tight_layout()
+    
+    if save_path:
+        Path(save_path).parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        print(f"Correctly classified examples saved to {save_path}")
+    
+    plt.close()
 
 
 # Example usage

@@ -54,9 +54,21 @@ def create_dataloaders(
         val_transform = AlbumentationsTransform(val_transform)
     
     # Create datasets
-    train_dataset = FlowerDataset(data_dir, split='train', transform=train_transform)
-    val_dataset = FlowerDataset(data_dir, split='val', transform=val_transform)
-    test_dataset = FlowerDataset(data_dir, split='test', transform=val_transform)
+    train_dataset = FlowerDataset(
+        data_dir, 
+        split='train', 
+        transform=train_transform
+    )
+    val_dataset = FlowerDataset(
+        data_dir, 
+        split='val', 
+        transform=val_transform
+    )
+    test_dataset = FlowerDataset(
+        data_dir, 
+        split='test', 
+        transform=val_transform
+    )
     
     # Create weighted sampler if requested
     train_sampler = None

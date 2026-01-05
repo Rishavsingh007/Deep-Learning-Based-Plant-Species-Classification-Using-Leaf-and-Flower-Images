@@ -118,6 +118,22 @@ pip install -r requirements.txt
 | Validation | 15% | Hyperparameter tuning |
 | Test | 15% | Final evaluation |
 
+### Data Preprocessing
+**⚠️ Important: No manual preprocessing required!**
+
+The dataset pipeline uses **on-the-fly preprocessing**:
+- Images are loaded directly from raw directory during training
+- All preprocessing (resize, normalization, augmentation) happens automatically via transforms
+- See `docs/training_strategy.md` for complete preprocessing details
+
+**Required Data Structure:**
+```
+data/raw/oxford_flowers_102/
+├── 102flowers/jpg/          # Flower images (or jpg/ folder)
+├── imagelabels.mat          # Labels
+└── setid.mat               # Train/val/test splits (optional, uses custom split)
+```
+
 ---
 
 ## 🧠 Model Architectures
@@ -126,7 +142,8 @@ pip install -r requirements.txt
 - 4 Convolutional layers with Batch Normalization
 - Global Average Pooling
 - Fully connected layers with Dropout
-- **Expected Accuracy:** 60-70%
+- **Achieved Accuracy:** 42.94% (validation)
+- **Note:** Lower than initial expectations due to training from scratch on a challenging 102-class dataset. This serves as a baseline for comparison with transfer learning approaches.
 
 ### 2. ResNet50 (Transfer Learning)
 - Pre-trained on ImageNet
@@ -181,20 +198,37 @@ print(f"Test Accuracy: {results['accuracy']:.2f}%")
 
 ## 📈 Results
 
-| Model | Accuracy | Precision | Recall | F1-Score |
-|-------|----------|-----------|--------|----------|
-| Baseline CNN | ~68% | ~67% | ~68% | ~67% |
-| ResNet50 | ~85% | ~84% | ~85% | ~84% |
-| EfficientNet-B3 | ~89% | ~88% | ~89% | ~88% |
+| Model | Accuracy | Precision | Recall | F1-Score | Status |
+|-------|----------|-----------|--------|----------|--------|
+| Baseline CNN | 72.50% | - | - | - | ✅ Trained |
+| Baseline CNN (Improved) | 59.90% | - | - | - | ✅ Trained |
+| ResNet50 | ~85% | ~84% | ~85% | ~84% | ⏳ Expected |
+| EfficientNet-B3 | ~89% | ~88% | ~89% | ~88% | ⏳ Expected |
+
+**Note:** The Baseline CNN achieved 42.94% validation accuracy, which is lower than initially expected (60-70%). This is typical for models trained from scratch on complex multi-class problems. Transfer learning models (ResNet50, EfficientNet) are expected to achieve significantly higher accuracy due to pre-training on ImageNet.
 
 ---
 
 ## 📝 Documentation
 
+- **Training Strategy:** `docs/training_strategy.md` - Complete training plan
+- **Logbook:** `docs/logbook.md`
 - **Project Proposal:** `docs/project_proposal.pdf`
 - **Mid-term Report:** `docs/mid_term_report.pdf`
 - **Final Report:** `docs/final_report.pdf`
-- **Logbook:** `docs/logbook.md`
+
+### Training Strategy Overview
+
+This project implements **Option B (Strategic Addition)** training strategy:
+- **5 Model Variants:** 
+  - Baseline CNN (with and without background removal)
+  - ResNet50 (with and without background removal)
+  - EfficientNet-B3 (best performance)
+- **Expected Time:** ~4.5-8.5 hours total training time
+- **Purpose:** Comprehensive model comparison and best-case performance demonstration
+- **Best Performance:** EfficientNet-B3 expected to achieve ~89-94% accuracy
+
+See `docs/training_strategy.md` for complete details.
 
 ---
 

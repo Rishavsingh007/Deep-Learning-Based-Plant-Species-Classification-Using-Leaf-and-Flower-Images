@@ -11,7 +11,7 @@ import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.cuda.amp import GradScaler, autocast
+from torch.amp import GradScaler, autocast
 from tqdm import tqdm
 import numpy as np
 from pathlib import Path
@@ -86,7 +86,7 @@ class Trainer:
         
         # Mixed precision training
         self.use_amp = use_amp and self.device == 'cuda'
-        self.scaler = GradScaler() if self.use_amp else None
+        self.scaler = GradScaler('cuda') if self.use_amp else None
         
         # Save directory
         self.save_dir = Path(save_dir)
@@ -96,8 +96,10 @@ class Trainer:
         self.history = {
             'train_loss': [],
             'train_acc': [],
+            'train_top5_acc': [],
             'val_loss': [],
             'val_acc': [],
+            'val_top5_acc': [],
             'learning_rate': []
         }
         
@@ -105,57 +107,80 @@ class Trainer:
         self.best_val_acc = 0.0
         self.best_val_loss = float('inf')
         
+        # Gradient accumulation
+        self.gradient_accumulation_steps = 1
+        
     def train_epoch(self):
         """Train for one epoch."""
         self.model.train()
         
         running_loss = 0.0
         correct = 0
+        correct_top5 = 0
         total = 0
         
         pbar = tqdm(self.train_loader, desc='Training', leave=False)
         
+        # Zero gradients at the start of epoch
+        self.optimizer.zero_grad()
+        
         for batch_idx, (images, labels) in enumerate(pbar):
-            images = images.to(self.device)
-            labels = labels.to(self.device)
-            
-            # Zero gradients
-            self.optimizer.zero_grad()
+            images = images.to(self.device, non_blocking=True)
+            labels = labels.to(self.device, non_blocking=True)
             
             # Forward pass
             if self.use_amp:
-                with autocast():
+                with autocast('cuda'):
                     outputs = self.model(images)
                     loss = self.criterion(outputs, labels)
+                    # Scale loss for gradient accumulation
+                    loss = loss / self.gradient_accumulation_steps
                 
                 # Backward pass with scaled gradients
                 self.scaler.scale(loss).backward()
-                self.scaler.step(self.optimizer)
-                self.scaler.update()
             else:
                 outputs = self.model(images)
                 loss = self.criterion(outputs, labels)
+                # Scale loss for gradient accumulation
+                loss = loss / self.gradient_accumulation_steps
                 
                 # Backward pass
                 loss.backward()
-                self.optimizer.step()
             
-            # Statistics
-            running_loss += loss.item() * images.size(0)
+            # Update weights only after accumulating gradients
+            if (batch_idx + 1) % self.gradient_accumulation_steps == 0:
+                if self.use_amp:
+                    self.scaler.step(self.optimizer)
+                    self.scaler.update()
+                else:
+                    self.optimizer.step()
+                self.optimizer.zero_grad()
+            
+            # Statistics (unscale loss for logging)
+            loss_value = loss.item() * self.gradient_accumulation_steps  # Unscale for logging
+            running_loss += loss_value * images.size(0)
             _, predicted = torch.max(outputs.data, 1)
+            
+            # Top-5 accuracy
+            _, top5_pred = torch.topk(outputs.data, 5, dim=1)
+            correct_top5 += top5_pred.eq(labels.view(-1, 1).expand_as(top5_pred)).sum().item()
+            
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
             
-            # Update progress bar
+            # Update progress bar (unscale loss for display)
+            loss_display = loss.item() * self.gradient_accumulation_steps
             pbar.set_postfix({
-                'loss': loss.item(),
-                'acc': 100 * correct / total
+                'loss': loss_display,
+                'acc': 100 * correct / total,
+                'top5': 100 * correct_top5 / total
             })
         
         epoch_loss = running_loss / total
         epoch_acc = 100 * correct / total
+        epoch_top5_acc = 100 * correct_top5 / total
         
-        return epoch_loss, epoch_acc
+        return epoch_loss, epoch_acc, epoch_top5_acc
     
     @torch.no_grad()
     def validate(self):
@@ -164,6 +189,7 @@ class Trainer:
         
         running_loss = 0.0
         correct = 0
+        correct_top5 = 0
         total = 0
         
         pbar = tqdm(self.val_loader, desc='Validation', leave=False)
@@ -173,19 +199,30 @@ class Trainer:
             labels = labels.to(self.device)
             
             # Forward pass
-            outputs = self.model(images)
-            loss = self.criterion(outputs, labels)
+            if self.use_amp:
+                with autocast('cuda'):
+                    outputs = self.model(images)
+                    loss = self.criterion(outputs, labels)
+            else:
+                outputs = self.model(images)
+                loss = self.criterion(outputs, labels)
             
             # Statistics
             running_loss += loss.item() * images.size(0)
             _, predicted = torch.max(outputs.data, 1)
+            
+            # Top-5 accuracy
+            _, top5_pred = torch.topk(outputs.data, 5, dim=1)
+            correct_top5 += top5_pred.eq(labels.view(-1, 1).expand_as(top5_pred)).sum().item()
+            
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
         
         epoch_loss = running_loss / total
         epoch_acc = 100 * correct / total
+        epoch_top5_acc = 100 * correct_top5 / total
         
-        return epoch_loss, epoch_acc
+        return epoch_loss, epoch_acc, epoch_top5_acc
     
     def train(
         self,
@@ -224,10 +261,10 @@ class Trainer:
             epoch_start = time.time()
             
             # Training
-            train_loss, train_acc = self.train_epoch()
+            train_loss, train_acc, train_top5_acc = self.train_epoch()
             
             # Validation
-            val_loss, val_acc = self.validate()
+            val_loss, val_acc, val_top5_acc = self.validate()
             
             # Get current learning rate
             current_lr = self.optimizer.param_groups[0]['lr']
@@ -235,8 +272,10 @@ class Trainer:
             # Update history
             self.history['train_loss'].append(train_loss)
             self.history['train_acc'].append(train_acc)
+            self.history['train_top5_acc'].append(train_top5_acc)
             self.history['val_loss'].append(val_loss)
             self.history['val_acc'].append(val_acc)
+            self.history['val_top5_acc'].append(val_top5_acc)
             self.history['learning_rate'].append(current_lr)
             
             # Scheduler step
@@ -251,8 +290,8 @@ class Trainer:
             
             # Print epoch results
             print(f"Epoch [{epoch+1}/{epochs}] - {epoch_time:.1f}s")
-            print(f"  Train Loss: {train_loss:.4f} | Train Acc: {train_acc:.2f}%")
-            print(f"  Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.2f}%")
+            print(f"  Train Loss: {train_loss:.4f} | Train Acc: {train_acc:.2f}% | Train Top-5: {train_top5_acc:.2f}%")
+            print(f"  Val Loss: {val_loss:.4f} | Val Acc: {val_acc:.2f}% | Val Top-5: {val_top5_acc:.2f}%")
             print(f"  Learning Rate: {current_lr:.2e}")
             
             # Save best model
@@ -260,7 +299,7 @@ class Trainer:
                 self.best_val_acc = val_acc
                 self.best_val_loss = val_loss
                 self.save_checkpoint(f'{model_name}_best.pth')
-                print(f"  ✓ New best model saved! (Val Acc: {val_acc:.2f}%)")
+                print(f"  [OK] New best model saved! (Val Acc: {val_acc:.2f}%)")
                 patience_counter = 0
             else:
                 patience_counter += 1

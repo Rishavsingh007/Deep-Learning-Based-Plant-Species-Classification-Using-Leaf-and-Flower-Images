@@ -81,6 +81,8 @@ class BaselineCNN(nn.Module):
         Number of input channels (default: 3 for RGB)
     dropout : float
         Dropout probability (default: 0.5)
+    improved : bool
+        If True, uses improved architecture with more capacity (default: False)
         
     Example:
     --------
@@ -90,30 +92,63 @@ class BaselineCNN(nn.Module):
     >>> print(output.shape)  # torch.Size([1, 102])
     """
     
-    def __init__(self, num_classes=102, in_channels=3, dropout=0.5):
+    def __init__(self, num_classes=102, in_channels=3, dropout=0.5, improved=False):
         super(BaselineCNN, self).__init__()
         
         self.num_classes = num_classes
+        self.improved = improved
         
-        # Feature extraction layers
-        self.features = nn.Sequential(
-            ConvBlock(in_channels, 64),   # 224 -> 112
-            ConvBlock(64, 128),           # 112 -> 56
-            ConvBlock(128, 256),          # 56 -> 28
-            ConvBlock(256, 512),          # 28 -> 14
-        )
-        
-        # Global Average Pooling
-        self.global_pool = nn.AdaptiveAvgPool2d((1, 1))
-        
-        # Classification head
-        self.classifier = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(512, 512),
-            nn.ReLU(inplace=True),
-            nn.Dropout(p=dropout),
-            nn.Linear(512, num_classes)
-        )
+        if improved:
+            # Improved architecture with more capacity
+            # Feature extraction layers - deeper with more channels
+            self.features = nn.Sequential(
+                ConvBlock(in_channels, 96, pool=False),   # 224 -> 224
+                ConvBlock(96, 96),                         # 224 -> 112
+                ConvBlock(96, 192, pool=False),            # 112 -> 112
+                ConvBlock(192, 192),                       # 112 -> 56
+                ConvBlock(192, 384, pool=False),           # 56 -> 56
+                ConvBlock(384, 384),                       # 56 -> 28
+                ConvBlock(384, 768, pool=False),          # 28 -> 28
+                ConvBlock(768, 768),                       # 28 -> 14
+            )
+            
+            # Global Average Pooling
+            self.global_pool = nn.AdaptiveAvgPool2d((1, 1))
+            
+            # Improved classification head with more capacity
+            self.classifier = nn.Sequential(
+                nn.Flatten(),
+                nn.Linear(768, 1024),
+                nn.ReLU(inplace=True),
+                nn.BatchNorm1d(1024),
+                nn.Dropout(p=dropout),
+                nn.Linear(1024, 512),
+                nn.ReLU(inplace=True),
+                nn.BatchNorm1d(512),
+                nn.Dropout(p=dropout * 0.5),  # Less dropout in second layer
+                nn.Linear(512, num_classes)
+            )
+        else:
+            # Original architecture
+            # Feature extraction layers
+            self.features = nn.Sequential(
+                ConvBlock(in_channels, 64),   # 224 -> 112
+                ConvBlock(64, 128),           # 112 -> 56
+                ConvBlock(128, 256),          # 56 -> 28
+                ConvBlock(256, 512),          # 28 -> 14
+            )
+            
+            # Global Average Pooling
+            self.global_pool = nn.AdaptiveAvgPool2d((1, 1))
+            
+            # Classification head
+            self.classifier = nn.Sequential(
+                nn.Flatten(),
+                nn.Linear(512, 512),
+                nn.ReLU(inplace=True),
+                nn.Dropout(p=dropout),
+                nn.Linear(512, num_classes)
+            )
         
         # Initialize weights
         self._initialize_weights()
@@ -123,7 +158,7 @@ class BaselineCNN(nn.Module):
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
                 nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
-            elif isinstance(m, nn.BatchNorm2d):
+            elif isinstance(m, (nn.BatchNorm2d, nn.BatchNorm1d)):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
             elif isinstance(m, nn.Linear):
@@ -146,6 +181,13 @@ class BaselineCNN(nn.Module):
         x = self.global_pool(x)
         x = x.view(x.size(0), -1)
         return x
+    
+    def get_feature_maps(self, x):
+        """
+        Extract feature maps before global pooling.
+        Useful for visualization.
+        """
+        return self.features(x)
     
     def count_parameters(self):
         """Count the number of trainable parameters."""
