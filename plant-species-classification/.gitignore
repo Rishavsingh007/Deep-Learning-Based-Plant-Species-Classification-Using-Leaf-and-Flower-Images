@@ -74,6 +74,9 @@ data/processed/
 # *.hdf5
 # *.ckpt
 
+# Model directory (exclude all model files)
+results/models/
+
 # ============================================
 # Log Files
 # ============================================
