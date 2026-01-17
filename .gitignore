@@ -137,3 +137,7 @@ coverage.xml
 *.tar.gz
 *.rar
 
+# ============================================
+# Documentation (Temporary/Proposal Files)
+# ============================================
+docs/mid_proposal.md

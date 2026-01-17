@@ -1,497 +1,429 @@
-# Training Strategy: Background Removal Impact Analysis
+# Training Strategy: Model Training Implementation
 
 **CT7160NI Computer Vision Coursework**  
-**Plant Species Classification - Training Plan**
+**Plant Species Classification - Actual Training Implementation**
+
+---
 
 ## Overview
 
-This document outlines the training strategy for evaluating the impact of segmentation mask-based background removal on model performance. This approach provides a comprehensive analysis suitable for coursework requirements while demonstrating both comparative effectiveness and best-case performance.
+This document describes the **actual training strategy** implemented for the plant species classification project. The project implemented three model architectures: a custom Baseline CNN, ResNet50 with transfer learning, and EfficientNet-B3 with transfer learning, achieving excellent classification performance on the Oxford 102 Flower Dataset.
 
 ---
 
-## Chosen Approach: Option B (Strategic Addition)
+## Training Approach
 
-### Rationale
+### Implemented Models
 
-We selected **Option B** (Strategic Addition) as it provides:
-- **Clear before/after comparison**: Direct comparison of Baseline CNN and ResNet50 with and without background removal
-- **Demonstrates improvement across model types**: Shows impact on both simple (Baseline CNN) and complex (ResNet50) architectures
-- **Best performance demonstration**: EfficientNet-B3 with masks showcases state-of-the-art results
-- **Reasonable training time**: Completable within a practical timeframe (~4.5-8.5 hours total)
-- **Comprehensive analysis**: Provides statistically meaningful results plus best-case performance for coursework documentation
+Three model architectures were trained and evaluated:
 
-### Training Plan
+| Model | Architecture Type | Pre-trained | Image Size | Parameters |
+|-------|------------------|-------------|------------|------------|
+| **Baseline CNN** | Custom CNN from scratch | No | 224×224 | 11.9M |
+| **ResNet50** | Transfer Learning | ImageNet | 224×224 | 24.6M |
+| **EfficientNet-B3** | Transfer Learning | ImageNet | 300×300 | 11.1M |
 
-We will train **5 model variants** in total (Option B - Strategic Addition):
+### Training Strategy Summary
 
-| Model | Background Removal | Purpose |
-|-------|-------------------|---------|
-| Baseline CNN | ❌ No | Baseline performance (without masks) |
-| Baseline CNN | ✅ Yes | Impact on simple architecture |
-| ResNet50 | ❌ No | Baseline for transfer learning |
-| ResNet50 | ✅ Yes | Impact on complex architecture |
-| EfficientNet-B3 | ✅ Yes | Best-case performance with masks |
-
-**Training Strategy:**
-- Baseline CNN and ResNet50 trained both with and without masks for clear before/after comparison
-- EfficientNet-B3 trained only with masks to demonstrate best possible performance
-- This approach balances comprehensive comparison with practical time constraints
+**Key Implementation Decisions:**
+- **No background removal**: Models trained on original images without segmentation mask preprocessing
+- **Two-phase training for ResNet50**: Frozen backbone followed by fine-tuning
+- **Extended training for Baseline CNN**: 150 epochs to ensure convergence from scratch
+- **Class imbalance handling**: Weighted sampling and class weights used for Baseline CNN
 
 ---
 
-## Expected Training Times
+## 1. Baseline CNN Training
 
-Based on RTX 2050 GPU (4GB VRAM) specifications:
-
-| Model | Epochs | Time per Training | Total Time |
-|-------|--------|------------------|------------|
-| Baseline CNN (no masks) | 50 | ~30-45 min | ~30-45 min |
-| Baseline CNN (with masks) | 50 | ~30-45 min | ~30-45 min |
-| ResNet50 (no masks) | 50 | ~1-2 hours | ~1-2 hours |
-| ResNet50 (with masks) | 50 | ~1-2 hours | ~1-2 hours |
-| EfficientNet-B3 (with masks) | 50 | ~1.5-3 hours | ~1.5-3 hours |
-| **Total** | - | - | **~4.5-8.5 hours** |
+### Architecture
+Custom 4-layer CNN trained from scratch:
+- 4 Convolutional layers (64, 128, 256, 512 channels)
+- Batch Normalization after each conv layer
+- Global Average Pooling
+- Fully connected layers with Dropout (0.5)
+- Output layer: 102 classes
 
 ### Training Configuration
 
-- **Batch Size**: 16-32 (Baseline CNN/ResNet50), 8-16 (EfficientNet-B3) - adjusted based on GPU memory
-- **Image Size**: 224×224 (Baseline CNN and ResNet50), 300×300 (EfficientNet-B3)
-- **Optimizer**: Adam with learning rate 1e-4
-- **Scheduler**: ReduceLROnPlateau (if needed)
-- **Loss Function**: CrossEntropyLoss
-- **Early Stopping**: Enabled with patience=10
+```python
+Configuration:
+  Epochs: 150
+  Learning Rate: 5e-4 (0.0005)
+  Optimizer: Adam
+  Weight Decay: 1e-4
+  Batch Size: 16
+  Image Size: 224×224
+  Loss Function: CrossEntropyLoss (with class weights)
+  Scheduler: ReduceLROnPlateau (patience=5, factor=0.5)
+  Early Stopping: Patience=10
+  Class Imbalance Handling: 
+    - Weighted Random Sampling: Enabled
+    - Class Weights in Loss: Enabled
+  Data Augmentation: Albumentations (rotation, flip, color jitter)
+```
+
+### Training Details
+
+**Why 150 Epochs?**
+- Training from scratch requires more epochs to learn features
+- Early stopping with patience=10 prevented overfitting
+- Best validation accuracy achieved at epoch 149
+
+**Class Imbalance Handling:**
+- **Weighted Random Sampling**: Ensures balanced batch sampling across classes
+- **Class Weights in Loss**: Inverse frequency weighting to handle imbalanced classes
+- Formula: `class_weights = 1.0 / class_counts` (normalized)
+
+**Learning Rate Strategy:**
+- Initial LR: 5e-4 (higher than transfer learning models)
+- Scheduler: ReduceLROnPlateau reduces LR by factor 0.5 when validation loss plateaus
+- Lower learning rate appropriate for training from scratch
+
+### Training Results
+
+**Best Performance:**
+- **Best Validation Accuracy**: 85.83% (Epoch 149)
+- **Best Validation Loss**: 0.443479
+- **Final Validation Accuracy**: 83.55%
+- **Final Training Accuracy**: 83.41%
+- **Test Accuracy**: 86.41% ⭐
+- **Test Top-5 Accuracy**: 97.80%
+- **Training Time**: ~2-3 hours (150 epochs on GPU)
+
+**Key Observations:**
+- Model required extended training to converge
+- Validation accuracy plateaued around epoch 140-150
+- Top-5 accuracy (97.80%) significantly higher than top-1, indicating good class separation
 
 ---
 
-## Data Preprocessing Status
+## 2. ResNet50 Training (Transfer Learning)
 
-### No Manual Preprocessing Required ✅
+### Architecture
+- Pre-trained ResNet50 backbone (ImageNet weights)
+- Replaced final classification layer (2048 → 256 → 102)
+- Two-phase training strategy
 
-**Important**: The dataset pipeline is configured for **on-the-fly preprocessing**. No manual preprocessing step is required before starting training.
+### Training Configuration
 
-### How It Works
-
-**Automatic On-the-Fly Processing:**
-- Images are loaded directly from `data/raw/oxford_flowers_102/102flowers/jpg/` during training
-- All preprocessing happens automatically via PyTorch transforms:
-  1. **Image Loading**: Images loaded from raw directory as needed
-  2. **Resize**: Automatically resized to target size (224×224 or 300×300)
-  3. **Background Removal**: Applied using masks if enabled (before transforms)
-  4. **Augmentation**: Random augmentations applied during training (rotation, flip, color jitter, etc.)
-  5. **Normalization**: ImageNet normalization (mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-  6. **Tensor Conversion**: Converted to PyTorch tensors
-
-### Required Data Structure
-
-Ensure the following structure exists:
+```python
+Configuration:
+  Phase 1 (Frozen Backbone):
+    Epochs: 10-15 (estimated)
+    Learning Rate: 1e-3
+    Backbone: Frozen
+    Trainable Parameters: ~2M (classification head only)
+  
+  Phase 2 (Fine-tuning):
+    Epochs: 30-35 (estimated)
+    Learning Rate: 1e-4 to 1e-5 (gradual reduction)
+    Backbone: Unfrozen (all layers trainable)
+    Trainable Parameters: ~24.6M (all layers)
+  
+  Total Epochs: 44
+  Batch Size: 16-32
+  Image Size: 224×224
+  Optimizer: Adam
+  Scheduler: ReduceLROnPlateau
+  Early Stopping: Enabled
 ```
+
+### Two-Phase Training Strategy
+
+**Phase 1: Frozen Backbone**
+- Freeze all ResNet50 backbone layers
+- Train only the newly added classification head
+- Higher learning rate (1e-3) for faster learning of new task-specific features
+- Purpose: Initialize classification head with task-appropriate weights
+
+**Phase 2: Fine-tuning**
+- Unfreeze all backbone layers
+- Lower learning rate (1e-4 or less) to fine-tune pre-trained features
+- Gradual learning rate reduction via scheduler
+- Purpose: Adapt ImageNet features to flower classification task
+
+**Rationale:**
+- Prevents destruction of useful ImageNet features during initial training
+- Allows classification head to learn first, then adapts backbone features
+- Standard transfer learning best practice
+
+### Training Results
+
+**Best Performance:**
+- **Best Validation Accuracy**: 98.53% (Epoch 34)
+- **Best Validation Loss**: 0.069528 (Epoch 40)
+- **Final Validation Accuracy**: 98.37%
+- **Final Training Accuracy**: 99.62%
+- **Test Accuracy**: 97.97% 
+- **Test Top-5 Accuracy**: 99.51%
+- **ROC-AUC (Macro)**: 0.9994
+- **Training Time**: ~1-2 hours (44 epochs on GPU)
+
+**Key Observations:**
+- Rapid convergence due to pre-trained weights
+- Excellent generalization (small gap between train and validation accuracy)
+- Near-perfect top-5 accuracy (99.51%) indicates strong discriminative power
+
+---
+
+## 3. EfficientNet-B3 Training (Transfer Learning)
+
+### Architecture
+- Pre-trained EfficientNet-B3 backbone (ImageNet weights)
+- Compound scaling (width, depth, resolution)
+- MBConv blocks with Squeeze-and-Excitation (SE) attention
+- Global Average Pooling + classification head (256 → 102)
+
+### Training Configuration
+
+```python
+Configuration:
+  Epochs: 50
+  Learning Rate: 1e-4 (initial, adaptive scheduling)
+  Optimizer: Adam
+  Weight Decay: 1e-4
+  Batch Size: 16-32 (adjusted for 300×300 images)
+  Image Size: 300×300 (larger than other models)
+  Loss Function: CrossEntropyLoss
+  Scheduler: ReduceLROnPlateau
+  Early Stopping: Enabled (patience=10)
+  Dropout: 0.3
+```
+
+### Training Details
+
+**Higher Resolution (300×300):**
+- EfficientNet-B3 benefits from larger input resolution
+- Compound scaling includes resolution scaling
+- Requires more GPU memory but improves performance
+
+**Efficient Architecture:**
+- Fewer parameters (11.1M) than ResNet50 (24.6M) but similar/higher accuracy
+- MBConv blocks with depthwise separable convolutions
+- SE attention mechanism for adaptive feature recalibration
+
+### Training Results
+
+**Best Performance:**
+- **Best Validation Accuracy**: 99.19% (Epoch ~47-50)
+- **Best Validation Loss**: 0.031144
+- **Final Validation Accuracy**: 98.94%
+- **Test Accuracy**: 98.94%  **Best Performance**
+- **Test Top-5 Accuracy**: 99.76%
+- **Precision (Macro)**: 99.03%
+- **Recall (Macro)**: 98.82%
+- **F1-Score (Macro)**: 98.86%
+- **ROC-AUC (Macro)**: 0.9993
+- **Training Time**: ~2-3 hours (50 epochs on GPU)
+
+**Key Observations:**
+- **Highest accuracy** among all models (98.94%)
+- Best accuracy-to-parameter ratio (98.94% with only 11.1M parameters)
+- Excellent per-class performance (high macro-averaged metrics)
+- Top-5 accuracy near perfect (99.76%)
+
+---
+
+## Data Preprocessing & Augmentation
+
+### Preprocessing Pipeline
+
+**On-the-Fly Processing:**
+- Images loaded directly from `data/raw/oxford_flowers_102/102flowers/jpg/`
+- No manual preprocessing required before training
+- All transformations applied during data loading
+
+**Standard Preprocessing:**
+- **Resize**: To target size (224×224 or 300×300)
+- **Normalization**: ImageNet statistics
+  - Mean: [0.485, 0.456, 0.406]
+  - Std: [0.229, 0.224, 0.225]
+- **Tensor Conversion**: PyTorch tensors (float32)
+
+### Data Augmentation (Training Only)
+
+**Albumentations Library:**
+- **Random Horizontal Flip**: 50% probability
+- **Random Rotation**: ±15 degrees
+- **Color Jitter**: Brightness, contrast, saturation variations
+- **Random Resized Crop**: Scale variations for robustness
+
+**Validation/Test:**
+- **No augmentation**: Only resize and normalization
+- Ensures fair evaluation on original images
+
+---
+
+## Training Infrastructure
+
+### Hardware Configuration
+- **GPU**: CUDA-compatible GPU (recommended)
+- **Batch Size**: Adjusted based on GPU memory (16-32)
+- **Mixed Precision**: Not used (standard float32 training)
+
+### Software Framework
+- **Deep Learning**: PyTorch 2.0+
+- **Data Processing**: torchvision, Albumentations
+- **Utilities**: NumPy, Matplotlib, scikit-learn
+
+### Training Utilities
+
+**Trainer Class** (`src/training/trainer.py`):
+- Centralized training loop
+- Automatic checkpointing
+- Learning rate scheduling
+- Early stopping
+- Metric logging
+
+**Callbacks** (`src/training/callbacks.py`):
+- Model checkpoint saving (best model based on validation accuracy)
+- Early stopping (patience-based)
+- Learning rate scheduling
+
+---
+
+## Model Comparison & Results
+
+### Performance Summary
+
+| Model | Test Accuracy | Top-5 Acc | Precision | Recall | F1-Score | ROC-AUC | Parameters | Inference Time |
+|-------|---------------|-----------|-----------|--------|----------|---------|------------|----------------|
+| **Baseline CNN** | 86.41% | 97.80% | 86.99% | 88.95% | 86.88% | 0.997 | 11.9M | 29.87 ms |
+| **ResNet50** | 97.97% | 99.51% | 97.62% | 97.53% | 97.43% | 0.999 | 24.6M | 20.82 ms |
+| **EfficientNet-B3** | **98.94%** ⭐ | **99.76%** | **99.03%** | **98.82%** | **98.86%** | 0.999 | **11.1M** | 24.10 ms |
+
+### Key Findings
+
+1. **Transfer Learning Advantage:**
+   - ResNet50 and EfficientNet-B3 outperform Baseline CNN by 11-12%
+   - Pre-trained ImageNet weights provide strong feature representations
+   - Significant performance gain without additional data
+
+2. **Efficiency vs. Performance:**
+   - EfficientNet-B3 achieves highest accuracy with fewer parameters
+   - Best accuracy-to-parameter ratio (98.94% with 11.1M params)
+   - Demonstrates effectiveness of compound scaling
+
+3. **Training Time Comparison:**
+   - Baseline CNN: ~2-3 hours (150 epochs, from scratch)
+   - ResNet50: ~1-2 hours (44 epochs, transfer learning)
+   - EfficientNet-B3: ~2-3 hours (50 epochs, transfer learning)
+   - Transfer learning models converge faster
+
+4. **Inference Performance:**
+   - ResNet50: Fastest (20.82 ms/image)
+   - EfficientNet-B3: Acceptable (24.10 ms/image) for best accuracy
+   - All models suitable for real-time applications
+
+---
+
+## Training Workflow
+
+### 1. Data Preparation
+```python
+# Verify data structure
 data/raw/oxford_flowers_102/
-├── 102flowers/
-│   └── jpg/              # All flower images (8,189 images)
-├── 102segmentations/
-│   └── segmim/           # Segmentation masks (8,189 masks)
-├── imagelabels.mat       # Image labels
-└── setid.mat            # Train/val/test split indices
+├── 102flowers/jpg/          # All images
+├── imagelabels.mat          # Labels
+└── setid.mat               # Train/val/test splits
 ```
 
-### Verification Checklist
+### 2. Model Training
 
-Before starting training, verify:
-- ✅ Raw images directory exists: `data/raw/oxford_flowers_102/102flowers/jpg/`
-- ✅ Masks directory exists: `data/raw/oxford_flowers_102/102segmentations/segmim/`
-- ✅ Labels file exists: `data/raw/oxford_flowers_102/imagelabels.mat`
-- ✅ Split file exists: `data/raw/oxford_flowers_102/setid.mat`
+**Option A: Training Scripts**
+```bash
+# Baseline CNN
+python train_baseline_cnn_no_masks.py
 
-### Why No Preprocessing?
-
-**Advantages of On-the-Fly Processing:**
-1. **Flexibility**: Easy to change image sizes or augmentation strategies without reprocessing
-2. **Storage Efficiency**: No need to store preprocessed images (saves disk space)
-3. **Speed**: Modern GPUs and data loaders handle on-the-fly processing efficiently
-4. **Mask Integration**: Background removal can be applied dynamically based on training configuration
-5. **Standard Practice**: Common approach in PyTorch-based deep learning projects
-
-### Note on `data/processed/` Directory
-
-The `data/processed/` directory exists but is **not used** by the current pipeline. It's empty and can be ignored. This directory would be used if you were to implement batch preprocessing, but it's not required for this project.
-
-### Note on `src/data/preprocessing.py` Module
-
-The `preprocessing.py` file contains utility functions but is **NOT used during training**. Training uses transforms from `augmentation.py` instead. The `preprocessing.py` module is useful for:
-- **Inference**: `preprocess_image()` function for preprocessing single images for model predictions
-- **Utilities**: Optional functions for batch preprocessing, statistics calculation, etc.
-
-**For training**: Use the on-the-fly transforms (already configured) - do NOT use `preprocessing.py` functions. See `docs/preprocessing_module_explanation.md` for detailed explanation.
-
-### Ready to Train
-
-Once the data structure is verified (checklist above), you can proceed directly to training. The dataset class handles all preprocessing automatically.
-
----
-
-## EfficientNet-B3 Considerations
-
-### Why Excluded from Option 1?
-
-EfficientNet-B3 is included in Option B (with masks only) for the following reasons:
-
-**1. Best Performance Demonstration:**
-- EfficientNet-B3 achieves the highest accuracy (~89-94% with masks)
-- Showcases state-of-the-art results for the coursework
-- Demonstrates the full potential of the approach
-
-**2. Balanced Time Investment:**
-- Training only with masks (not both with/without) keeps additional time reasonable (~1.5-3 hours)
-- Total training time remains manageable (~4.5-8.5 hours)
-- Good trade-off between comprehensiveness and time constraints
-
-**3. Comprehensive Analysis:**
-- Provides performance comparison across all three architectures
-- Shows both comparative analysis (Baseline/ResNet50) and best-case performance (EfficientNet)
-- Creates well-rounded experimental design
-
-**Note on Resource Constraints:**
-- RTX 2050 (4GB VRAM) may require smaller batch sizes (8-16) for 300×300 images
-- Memory pressure is manageable with proper batch size adjustment
-- Training time may be longer but acceptable for coursework
-
-### Why Option B Was Chosen
-
-**Selected: Option B (Strategic Addition)**
-
-We selected Option B over other alternatives:
-
-**Option A (Not Chosen): Comprehensive - All 6 Variants**
-- Train all 6 variants: Baseline CNN, ResNet50, and EfficientNet-B3 (each with/without masks)
-- **Total time**: ~6-11.5 hours
-- **Not selected because**: Too time-consuming for coursework timeline
-
-**Option B (Chosen): Strategic Addition - 5 Variants**
-- Train EfficientNet-B3 **with masks** (best performance)
-- Keep Baseline CNN and ResNet50 with/without masks
-- **Total variants**: 5
-- **Additional time**: ~1.5-3 hours (compared to Option 1)
-- **Selected because**: Shows best-case performance while maintaining before/after comparison, balanced time investment
-
-**Option C (Not Chosen): Post-Training Addition**
-- Complete Option 1 first, then add EfficientNet-B3 if time permits
-- **Not selected because**: Option B provides better structure and planning upfront
-
-### EfficientNet-B3 Specific Configuration
-
-If training EfficientNet-B3, use:
-
-```python
-# Different image size required
-loaders = create_dataloaders(
-    data_dir='data/raw/oxford_flowers_102',
-    image_size=300,  # EfficientNet-B3 requires 300x300 (not 224x224)
-    batch_size=16,   # May need smaller batch size (8-16) due to larger images
-    num_workers=0,   # May need to reduce for Windows compatibility
-    use_masks=True,  # or False for baseline
-    apply_background_removal=True,
-    background_color='black'
-)
-
-# Model initialization
-from src.models import EfficientNetClassifier
-model = EfficientNetClassifier(
-    num_classes=102,
-    model_name='efficientnet_b3',
-    pretrained=True,
-    freeze_backbone=True,
-    dropout=0.3
-)
+# ResNet50
+python train_resnet50.py
 ```
 
-### Expected Performance
+**Option B: Jupyter Notebook**
+- Run `03_model_training.ipynb` for centralized training
+- All models can be trained in sequence
 
-| Model | Expected Accuracy (without masks) | Expected Accuracy (with masks) | Expected Improvement |
-|-------|-----------------------------------|--------------------------------|---------------------|
-| EfficientNet-B3 | N/A (not trained without masks) | ~89-94% | (Best Performance) |
+### 3. Model Evaluation
 
-**Note**: EfficientNet-B3 is expected to achieve the highest absolute accuracy among all models. While not trained without masks for comparison, based on ResNet50 results, we expect similar relative improvement patterns (2-3% gain) if compared. EfficientNet-B3 with masks represents the best-case performance for this project.
+**Comprehensive Evaluation:**
+- Run `04_model_evaluation.ipynb`
+- Generates metrics, confusion matrices, ROC curves
+- Per-class performance analysis
 
-### Chosen Approach: Option B (Strategic Addition)
-
-**Selected Option B** for the following reasons:
-1. **Comprehensive comparison**: Baseline CNN and ResNet50 provide clear before/after comparison (with/without masks)
-2. **Best performance demonstration**: EfficientNet-B3 with masks shows the best achievable accuracy
-3. **Time efficiency**: Completes in reasonable timeframe (~4.5-8.5 hours) - more manageable than full 6-variant approach
-4. **Report quality**: Demonstrates the technique's effectiveness while also showcasing state-of-the-art performance
-5. **Balanced approach**: Shows both comparative analysis and best-case results without excessive training time
-
----
-
-## Background Removal Method
-
-### Implementation Details
-
-**Process:**
-1. Load segmentation mask from `102segmentations/segmim/` directory
-2. Convert mask to binary (foreground = 255, background = 0)
-3. Apply mask to original image
-4. Replace background with black pixels (foreground preserved)
-5. Apply standard transforms (resize, normalize, augment)
-
-**Why Black Background?**
-- Common practice in computer vision preprocessing
-- Reduces background noise that could confuse the model
-- Focuses model attention on foreground objects (flowers)
-- Comparable to image cropping but preserves full image dimensions
-
-### Expected Benefits
-
-**Hypothesized Improvements:**
-- **2-3% accuracy improvement**: Background removal should help models focus on flower features
-- **Better feature learning**: Model learns flower-specific patterns without background distractions
-- **More robust predictions**: Less sensitivity to varying backgrounds in test images
-- **Improved attention patterns**: Grad-CAM visualizations should align better with actual flower regions
+**Error Analysis:**
+- Run `05_inference_error_analysis.ipynb`
+- Misclassification patterns
+- Grad-CAM visualizations
 
 ---
 
-## Documentation Plan
+## Best Practices Implemented
 
-### 1. Method Description
+### 1. Early Stopping
+- Prevents overfitting
+- Stops training when validation loss plateaus
+- Saves best model checkpoint
 
-**What to include:**
-- Explanation of segmentation mask-based background removal
-- Rationale for why background removal should improve classification
-- Implementation details (mask loading, application, preprocessing pipeline)
-- Comparison of preprocessed images (original vs. masked)
+### 2. Learning Rate Scheduling
+- ReduceLROnPlateau adapts to training progress
+- Gradual reduction prevents overshooting optima
+- Different strategies for different model types
 
-**Location in report:**
-- Methodology section
-- Data preprocessing subsection
+### 3. Model Checkpointing
+- Save best model based on validation accuracy
+- Resume training from checkpoints if interrupted
+- Model versioning for reproducibility
 
-### 2. Results Presentation
+### 4. Class Imbalance Handling (Baseline CNN)
+- Weighted sampling ensures balanced batches
+- Class weights in loss function
+- Important for 102-class classification
 
-**What to include:**
-- **Performance metrics** for all 5 model variants:
-  - Training accuracy and loss curves
-  - Validation accuracy and loss curves
-  - Test accuracy (final metric)
-  - Confusion matrices (optional, if space permits)
-
-- **Comparative tables:**
-  ```
-  | Model | With Masks | Test Accuracy | Improvement |
-  |-------|------------|---------------|-------------|
-  | Baseline CNN | No  | 42.94% (validation) | - |
-  | Baseline CNN | Yes | ~45-46% (expected) | +2-3% |
-  | ResNet50 | No  | X.XX% | - |
-  | ResNet50 | Yes | X.XX% | +Y.YY% |
-  | EfficientNet-B3 | Yes | X.XX% | (Best Performance) |
-  ```
-
-**Location in report:**
-- Results section
-- Experimental results subsection
-
-### 3. Analysis & Discussion
-
-**What to include:**
-- **Quantitative analysis:**
-  - Magnitude of improvement for each model
-  - Statistical significance (if applicable)
-  - Which model benefits more from background removal
-
-- **Qualitative analysis:**
-  - Visual inspection of preprocessed images
-  - Sample predictions comparison
-  - Error analysis (cases where masks help vs. hurt)
-
-- **Discussion points:**
-  - Why background removal helps (focus on foreground features)
-  - Why improvement might be model-dependent
-  - Performance comparison across all three architectures
-  - EfficientNet-B3 as the best-performing model (with masks)
-  - Limitations of this approach (black backgrounds might not be natural)
-
-**Location in report:**
-- Discussion section
-- Analysis of results subsection
-
-### 4. Visualizations
-
-**What to include:**
-
-1. **Preprocessing visualization:**
-   - Side-by-side: Original image → Mask → Masked image
-   - Show 3-5 example images across different classes
-
-2. **Training curves:**
-   - Loss curves: Training vs. Validation (with/without masks)
-   - Accuracy curves: Training vs. Validation (with/without masks)
-   - Comparison plots: Overlay plots showing improvement
-
-3. **Performance comparison:**
-   - Bar charts: Test accuracy comparison
-   - Improvement percentage visualization
-
-4. **Sample predictions:**
-   - Correct predictions: With vs. without masks
-   - Error cases: Where masks help vs. where they don't
-
-**Location in report:**
-- Results section (figures)
-- Appendix (additional visualizations)
+### 5. Data Augmentation
+- Improves generalization
+- Reduces overfitting
+- Increases effective dataset size
 
 ---
 
-## Expected Outcomes
+## Lessons Learned
 
-### Quantitative Metrics
+### What Worked Well
 
-**Target Improvements:**
-- Baseline CNN: +1-2% accuracy improvement (with masks vs. without)
-- ResNet50: +2-3% accuracy improvement (with masks vs. without)
+1. **Transfer Learning**: Dramatic performance improvement (11-12% accuracy gain)
+2. **Two-Phase Training**: Effective for ResNet50 fine-tuning
+3. **Extended Training**: Baseline CNN benefited from 150 epochs
+4. **Class Imbalance Handling**: Weighted sampling improved baseline performance
+5. **Higher Resolution**: EfficientNet-B3 benefited from 300×300 input
 
-**Baseline Expectations (without masks):**
-- Baseline CNN: 42.94% validation accuracy (actual achieved) - lower than initially expected due to training from scratch on 102-class dataset
-- ResNet50: ~85-90% test accuracy (expected)
+### Challenges Overcome
 
-**Best Performance (with masks):**
-- EfficientNet-B3: ~89-94% test accuracy (highest expected accuracy)
-
-### Qualitative Observations
-
-- Training curves should show smoother convergence with masks
-- Validation accuracy should plateau at higher values with masks
-- Model confidence (prediction probabilities) may be higher for correct predictions
-- Attention visualizations (Grad-CAM) should align better with flower regions
-
----
-
-## Implementation Notes
-
-### Training Scripts
-
-Each model variant should be saved with descriptive names:
-- `baseline_cnn_no_masks_epoch50.pth`
-- `baseline_cnn_with_masks_epoch50.pth`
-- `resnet50_no_masks_epoch50.pth`
-- `resnet50_with_masks_epoch50.pth`
-
-### Configuration
-
-**For Baseline CNN and ResNet50 (with masks):**
-```python
-loaders = create_dataloaders(
-    data_dir='data/raw/oxford_flowers_102',
-    image_size=224,
-    use_masks=True,
-    apply_background_removal=True,
-    background_color='black'
-)
-```
-
-**For Baseline CNN and ResNet50 (without masks):**
-```python
-loaders = create_dataloaders(
-    data_dir='data/raw/oxford_flowers_102',
-    image_size=224,
-    use_masks=False,
-    apply_background_removal=False
-)
-```
-
-**For EfficientNet-B3 (with masks):**
-```python
-loaders = create_dataloaders(
-    data_dir='data/raw/oxford_flowers_102',
-    image_size=300,  # EfficientNet-B3 requires 300x300
-    batch_size=16,   # Smaller batch size for larger images
-    use_masks=True,
-    apply_background_removal=True,
-    background_color='black'
-)
-
-from src.models import EfficientNetClassifier
-model = EfficientNetClassifier(
-    num_classes=102,
-    model_name='efficientnet_b3',
-    pretrained=True,
-    freeze_backbone=True
-)
-```
-
-### Logging
-
-Save training logs for each variant:
-- Training history (loss, accuracy per epoch)
-- Best validation accuracy
-- Training time
-- Final test accuracy
-
----
-
-## Risk Mitigation
-
-### Potential Issues
-
-1. **GPU Memory**: If batch size needs reduction, adjust accordingly
-2. **Training Time**: Monitor progress; may need to reduce epochs if time-constrained
-3. **No Improvement**: If masks don't help, document and analyze why
-4. **Mask Quality**: Some masks may be imperfect; dataset handles missing masks gracefully
-
-### Contingency Plans
-
-- If training takes too long: Reduce epochs to 30-40 (still sufficient for coursework)
-- If no improvement: Document findings and discuss in report (negative results are still valid)
-- If GPU issues: Use smaller batch sizes or CPU (much slower but functional)
-
----
-
-## Timeline Estimate
-
-| Phase | Task | Time |
-|-------|------|------|
-| Setup | Prepare training scripts | 30 min |
-| Training 1 | Baseline CNN (no masks) | 30-45 min |
-| Training 2 | Baseline CNN (with masks) | 30-45 min |
-| Training 3 | ResNet50 (no masks) | 1-2 hours |
-| Training 4 | ResNet50 (with masks) | 1-2 hours |
-| Training 5 | EfficientNet-B3 (with masks) | 1.5-3 hours |
-| Analysis | Evaluate results, generate plots | 1-2 hours |
-| **Total** | **Complete training phase** | **~6-10 hours** |
-
----
-
-## Success Criteria
-
-### Minimum Success
-
-✅ All 5 models train successfully  
-✅ Performance metrics recorded for all variants  
-✅ Clear comparison showing impact (positive or negative) for Baseline CNN and ResNet50  
-✅ EfficientNet-B3 demonstrates best performance  
-✅ Visualizations generated  
-
-### Ideal Success
-
-✅ All 5 models train successfully  
-✅ Measurable improvement (1-3% accuracy gain) for Baseline CNN and ResNet50  
-✅ EfficientNet-B3 achieves highest accuracy (~89-94%)  
-✅ Comprehensive visualizations and analysis  
-✅ Clear documentation ready for report  
+1. **Training from Scratch**: Baseline CNN required careful hyperparameter tuning
+2. **GPU Memory**: Batch size adjusted based on model and image size
+3. **Convergence**: Learning rate scheduling crucial for stable training
+4. **Overfitting**: Early stopping and dropout prevented overfitting
 
 ---
 
 ## Conclusion
 
-This training strategy provides a balanced approach that:
-- Demonstrates thorough experimental methodology
-- Shows impact of segmentation-based preprocessing
-- Completes within reasonable time constraints
-- Generates sufficient data for comprehensive analysis
-- Aligns with coursework requirements and expectations
+The implemented training strategy successfully achieved excellent classification performance:
 
-The focus on Baseline CNN and ResNet50 (with and without masks) provides a clear before/after comparison while maintaining feasibility within the project timeline.
+- **Baseline CNN**: 86.41% accuracy (strong baseline from scratch)
+- **ResNet50**: 97.97% accuracy (excellent transfer learning performance)
+- **EfficientNet-B3**: **98.94% accuracy** (best performance, most efficient)
+
+The strategy demonstrates the effectiveness of:
+- Transfer learning for multi-class classification
+- Two-phase training for fine-tuning
+- Appropriate hyperparameter selection
+- Proper handling of class imbalance
+- Effective data augmentation
+
+All models achieved strong top-5 accuracy (>97%), indicating good class separation and practical usability for real-world applications.
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: December 2024  
-**Author**: CT7160NI Computer Vision Coursework
-
+**Document Version**: 2.0 (Based on Actual Implementation)  
+**Last Updated**: January 2026
+**Author**: Rishav Singh (NP01MS7A240010)
