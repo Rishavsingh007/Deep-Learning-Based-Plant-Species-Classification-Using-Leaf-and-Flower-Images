@@ -1,0 +1,4 @@
+Model,Best Val Acc (%),Best Val Top-5 Acc (%),Final Val Acc (%),Best Val Loss,Total Epochs,Image Size,Parameters
+Baseline CNN (Improved),85.83,97.64,83.55,0.443479,150,224×224,11909894
+ResNet50,98.53,99.92,98.37,0.069528,44,224×224,24609446
+EfficientNet-B3,99.19,100.0,98.94,0.031144,50,300×300,10700000

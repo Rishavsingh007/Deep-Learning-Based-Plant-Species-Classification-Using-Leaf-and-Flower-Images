@@ -1,0 +1,87 @@
+================================================================================
+INFERENCE VISUALIZATION & ERROR ANALYSIS SUMMARY
+================================================================================
+
+Analysis Date: 2026-01-13 07:27:29
+Dataset: Oxford 102 Flower Dataset
+Number of Classes: 102
+
+================================================================================
+
+BASELINE CNN
+--------------------------------------------------------------------------------
+Test Accuracy: 86.41%
+Total Errors: 167
+Error Rate: 13.59%
+
+Top 5 Confusion Pairs:
+  Class 88 → Class 82: 4 times
+  Class 73 → Class 30: 4 times
+  Class 75 → Class 97: 3 times
+  Class 42 → Class 97: 3 times
+  Class 82 → Class 85: 3 times
+
+Per-Class Performance:
+  Mean Accuracy: 88.95%
+  Worst Classes: [42, 3, 79, 71, 96]
+  Best Classes: [80, 86, 67, 65, 97]
+
+Confidence Analysis:
+  Mean Confidence (Correct): 0.9208
+  Mean Confidence (Incorrect): 0.5855
+
+
+RESNET50
+--------------------------------------------------------------------------------
+Test Accuracy: 97.97%
+Total Errors: 25
+Error Rate: 2.03%
+
+Top 5 Confusion Pairs:
+  Class 3 → Class 8: 1 times
+  Class 98 → Class 89: 1 times
+  Class 57 → Class 45: 1 times
+  Class 72 → Class 12: 1 times
+  Class 28 → Class 30: 1 times
+
+Per-Class Performance:
+  Mean Accuracy: 97.53%
+  Worst Classes: [3, 95, 2, 0, 38]
+  Best Classes: [93, 97, 99, 100, 101]
+
+Confidence Analysis:
+  Mean Confidence (Correct): 0.9904
+  Mean Confidence (Incorrect): 0.6873
+
+
+EFFICIENTNET-B3
+--------------------------------------------------------------------------------
+Test Accuracy: 98.94%
+Total Errors: 13
+Error Rate: 1.06%
+
+Top 5 Confusion Pairs:
+  Class 95 → Class 96: 2 times
+  Class 83 → Class 68: 1 times
+  Class 31 → Class 61: 1 times
+  Class 98 → Class 70: 1 times
+  Class 57 → Class 45: 1 times
+
+Per-Class Performance:
+  Mean Accuracy: 98.82%
+  Worst Classes: [31, 83, 95, 8, 92]
+  Best Classes: [96, 97, 99, 100, 101]
+
+Confidence Analysis:
+  Mean Confidence (Correct): 0.9948
+  Mean Confidence (Incorrect): 0.7385
+
+
+================================================================================
+KEY FINDINGS
+================================================================================
+
+1. Transfer learning models show higher confidence on correct predictions
+2. Common failure cases often involve visually similar flower species
+3. Models typically disagree on challenging samples
+4. Per-class performance varies significantly across the 102 classes

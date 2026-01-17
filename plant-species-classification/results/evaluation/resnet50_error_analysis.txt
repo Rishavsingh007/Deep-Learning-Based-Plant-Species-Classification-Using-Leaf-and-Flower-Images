@@ -1,0 +1,17 @@
+ResNet50 Error Analysis
+============================================================
+
+Total errors: 25
+Error rate: 2.03%
+
+Top confusion pairs:
+  Class 3 -> Class 8: 1 times
+  Class 98 -> Class 89: 1 times
+  Class 57 -> Class 45: 1 times
+  Class 72 -> Class 12: 1 times
+  Class 28 -> Class 30: 1 times
+  Class 49 -> Class 11: 1 times
+  Class 41 -> Class 14: 1 times
+  Class 33 -> Class 4: 1 times
+  Class 87 -> Class 100: 1 times
+  Class 2 -> Class 66: 1 times

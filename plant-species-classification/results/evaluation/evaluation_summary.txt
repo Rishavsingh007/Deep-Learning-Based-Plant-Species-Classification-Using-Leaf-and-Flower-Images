@@ -1,0 +1,87 @@
+================================================================================
+MODEL EVALUATION SUMMARY
+================================================================================
+
+Dataset: Oxford 102 Flower Dataset
+Test Samples: 1229
+Number of Classes: 102
+Evaluation Date: 2026-01-11 21:24:14
+
+================================================================================
+
+BASELINE CNN (IMPROVED)
+--------------------------------------------------------------------------------
+Architecture: Custom CNN trained from scratch
+Image Size: 224×224
+Test Accuracy: 86.41%
+Top-5 Accuracy: 97.80%
+Precision (Macro): 86.99%
+Recall (Macro): 88.95%
+F1-Score (Macro): 86.88%
+ROC-AUC (Macro): 0.9971
+Parameters: 11,909,894
+Inference Time: 37.42 ms/image
+Training Best Val Acc: 85.83%
+
+RESNET50
+--------------------------------------------------------------------------------
+Architecture: ResNet50 with transfer learning
+Image Size: 224×224
+Test Accuracy: 97.97%
+Top-5 Accuracy: 99.51%
+Precision (Macro): 97.62%
+Recall (Macro): 97.53%
+F1-Score (Macro): 97.43%
+ROC-AUC (Macro): 0.9994
+Parameters: 24,609,446
+Inference Time: 23.38 ms/image
+Training Best Val Acc: 98.53%
+
+EFFICIENTNET-B3
+--------------------------------------------------------------------------------
+Architecture: EfficientNet-B3 with transfer learning
+Image Size: 300×300
+Test Accuracy: 98.94%
+Top-5 Accuracy: 99.76%
+Precision (Macro): 99.03%
+Recall (Macro): 98.82%
+F1-Score (Macro): 98.86%
+ROC-AUC (Macro): 0.9993
+Parameters: 11,115,918
+Inference Time: 27.30 ms/image
+Training Best Val Acc: 99.19%
+
+================================================================================
+MODEL COMPARISON
+================================================================================
+
+Performance Ranking (by Test Accuracy):
+1. EfficientNet-B3: 98.94%
+2. ResNet50: 97.97%
+3. Baseline CNN: 86.41%
+
+Best performing model: EfficientNet-B3 (98.94% accuracy)
+
+================================================================================
+KEY FINDINGS
+================================================================================
+
+1. Transfer Learning Advantage:
+   - ResNet50 and EfficientNet-B3 significantly outperform the baseline CNN
+   - Pre-trained ImageNet weights provide strong feature representations
+   - Transfer learning reduces training time and improves generalization
+
+2. Model Efficiency:
+   - EfficientNet-B3 achieves highest accuracy with fewer parameters
+   - EfficientNet-B3: 11.1M params vs ResNet50: 24.6M params
+   - Demonstrates the effectiveness of compound scaling
+
+3. Classification Performance:
+   - All models show strong top-5 accuracy (>95%), indicating good class separation
+   - High macro-averaged F1-scores suggest balanced performance across classes
+   - ROC-AUC scores close to 1.0 indicate excellent discriminative ability
+
+4. Practical Considerations:
+   - Fastest inference: 23.38 ms/image
+   - Model selection should balance accuracy, speed, and resource constraints
+   - EfficientNet-B3 offers best accuracy-to-parameter ratio

@@ -1,0 +1,17 @@
+Baseline CNN Error Analysis
+============================================================
+
+Total errors: 167
+Error rate: 13.59%
+
+Top confusion pairs:
+  Class 88 -> Class 82: 4 times
+  Class 73 -> Class 30: 4 times
+  Class 75 -> Class 97: 3 times
+  Class 42 -> Class 97: 3 times
+  Class 82 -> Class 85: 3 times
+  Class 71 -> Class 81: 3 times
+  Class 50 -> Class 85: 3 times
+  Class 45 -> Class 20: 2 times
+  Class 88 -> Class 43: 2 times
+  Class 50 -> Class 75: 2 times
