@@ -86,7 +86,7 @@ Configuration:
 - **Best Validation Loss**: 0.443479
 - **Final Validation Accuracy**: 83.55%
 - **Final Training Accuracy**: 83.41%
-- **Test Accuracy**: 86.41% ⭐
+- **Test Accuracy**: 86.41% 
 - **Test Top-5 Accuracy**: 97.80%
 - **Training Time**: ~2-3 hours (150 epochs on GPU)
 
@@ -290,7 +290,7 @@ Configuration:
 |-------|---------------|-----------|-----------|--------|----------|---------|------------|----------------|
 | **Baseline CNN** | 86.41% | 97.80% | 86.99% | 88.95% | 86.88% | 0.997 | 11.9M | 29.87 ms |
 | **ResNet50** | 97.97% | 99.51% | 97.62% | 97.53% | 97.43% | 0.999 | 24.6M | 20.82 ms |
-| **EfficientNet-B3** | **98.94%** ⭐ | **99.76%** | **99.03%** | **98.82%** | **98.86%** | 0.999 | **11.1M** | 24.10 ms |
+| **EfficientNet-B3** | **98.94%**  | **99.76%** | **99.03%** | **98.82%** | **98.86%** | 0.999 | **11.1M** | 24.10 ms |
 
 ### Key Findings
 
@@ -425,5 +425,5 @@ All models achieved strong top-5 accuracy (>97%), indicating good class separati
 ---
 
 **Document Version**: 2.0 (Based on Actual Implementation)  
-**Last Updated**: January 2026
+**Last Updated**: January 2026  
 **Author**: Rishav Singh (NP01MS7A240010)
