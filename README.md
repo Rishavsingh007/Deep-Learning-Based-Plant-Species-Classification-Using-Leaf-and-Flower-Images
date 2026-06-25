@@ -382,7 +382,7 @@ The project includes comprehensive visualizations in `results/figures/`:
 
 ## Author
 
-**Student Name:** Rishav Singh  
+**Rishav Singh** 
 **GitHub:** [Rishavsingh007](https://github.com/Rishavsingh007)
 
 ---
