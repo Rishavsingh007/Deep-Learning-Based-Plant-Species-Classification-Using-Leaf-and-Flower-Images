@@ -1,9 +1,5 @@
 # Plant Species Classification using Deep Learning
 
-## CT7160NI Computer Vision Coursework
-**London Metropolitan University / Islington College**  
-**Autumn Semester 2025**
-
 ---
 
 ## Project Overview
@@ -387,16 +383,7 @@ The project includes comprehensive visualizations in `results/figures/`:
 ## Author
 
 **Student Name:** Rishav Singh  
-**Student ID:** NP01MS7A240010  
-**Module:** CT7160NI Computer Vision  
-**Institution:** London Metropolitan University / Islington College  
 **GitHub:** [Rishavsingh007](https://github.com/Rishavsingh007)
-
----
-
-## License
-
-This project is submitted as part of academic coursework for CT7160NI Computer Vision module.
 
 ---
 
@@ -405,7 +392,6 @@ This project is submitted as part of academic coursework for CT7160NI Computer V
 - Oxford 102 Flower Dataset by VGG Research Group
 - PyTorch and torchvision communities
 - Pre-trained models from torchvision
-- Mr. Juned Alam
 
 ---
 
